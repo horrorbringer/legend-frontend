@@ -115,7 +115,7 @@ export default function HomePage() {
                     </h3>
                     <p className="text-gray-400">{movie.genre}</p>
                   </div>
-                  <Link href={`/customer/book/${movie.id}`} className="block">
+                  <Link href={`/movies/${movie.id}`} className="block">
                     <Button 
                       className="w-full bg-red-600/80 hover:bg-red-600 text-white py-6 text-base transition-all duration-300 hover:shadow-xl hover:shadow-red-600/20"
                     >

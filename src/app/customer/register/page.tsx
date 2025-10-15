@@ -15,25 +15,35 @@ export default function CustomerRegisterPage() {
   const [success, setSuccess] = useState("");
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+  e.preventDefault();
+  setError("");
+  setSuccess("");
 
-    try {
-      await api.get("http://localhost:8000/sanctum/csrf-cookie");
-      await api.post("/customer/register", {
-        name,
-        email,
-        password,
-        password_confirmation,
-      });
+  try {
+    await api.get("/sanctum/csrf-cookie");
+    
+    const res = await api.post("/api/customer/register", {
+      name,
+      email,
+      password,
+      password_confirmation,
+    });
 
-      setSuccess("Registration successful! Redirecting...");
-      setTimeout(() => router.push("/customer/login"), 1500);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Registration failed");
+    setSuccess("Registration successful! Redirecting...");
+    
+    // User is already logged in after registration
+    setTimeout(() => router.push("/customer/dashboard"), 1500);
+  } catch (err: any) {
+    const message = err.response?.data?.message || "Registration failed";
+    const errors = err.response?.data?.errors;
+    
+    if (errors) {
+      setError(Object.values(errors).flat().join(", "));
+    } else {
+      setError(message);
     }
-  };
+  }
+};
 
   return (
     <div className="flex items-center justify-center h-screen">

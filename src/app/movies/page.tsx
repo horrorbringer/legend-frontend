@@ -7,8 +7,10 @@ import { Card } from "@/components/ui/card";
 export default function MoviesPage() {
   const [movies, setMovies] = useState<any[]>([]);
   useEffect(() => {
-    api.get("/api/customer/movies").then((r) => setMovies(r.data));
+    api.get("/api/movies").then((r) => setMovies(r.data.data));
   }, []);
+
+console.log(movies);
 
   return (
     <div className="grid grid-cols-3 gap-4">
