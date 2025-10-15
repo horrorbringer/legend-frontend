@@ -9,7 +9,7 @@ export function useRequireAuth(role: "admin" | "customer") {
 
   useEffect(() => {
     if (!loading && (!user || user.role !== role)) {
-      router.push(role === "admin" ? "/admin/login" : "/login");
+      router.push(role === "admin" ? "/admin/login" : "/customer/login");
     }
   }, [user, loading, role, router]);
 

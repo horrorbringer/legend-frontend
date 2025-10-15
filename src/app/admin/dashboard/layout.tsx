@@ -6,18 +6,18 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import AuthGuard from "@/components/AuthGuard";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { logout } = useAuth();
   const pathname = usePathname();
   const [admin, setAdmin] = useState<any>(null);
 
   useEffect(() => {
     const fetchAdmin = async () => {
       try {
-        await api.get("/sanctum/csrf-cookie");
-        const res = await api.get("/admin/profile");
+        const res = await api.get("/api/admin/profile");
         setAdmin(res.data);
       } catch {
         router.push("/admin/login");
@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [router]);
 
   const handleLogout = async () => {
-    await api.post("/api/logout");
+    await logout();
     router.push("/admin/login");
   };
 
@@ -40,7 +40,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <AuthGuard role="admin">
     <div className="flex min-h-screen bg-gray-50">
       <aside className="w-64 bg-white border-r shadow-sm p-4 flex flex-col justify-between">
         <div>
@@ -69,6 +68,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
       <main className="flex-1 p-6">{children}</main>
     </div>
-    </AuthGuard>
   );
 }
