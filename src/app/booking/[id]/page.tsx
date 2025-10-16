@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   Clock, Film, MapPin, Calendar, User, CreditCard, 
-  Check, X, Loader2, ArrowLeft, Armchair, Monitor
+  Check, X, Loader2, ArrowLeft, Monitor, ChevronRight
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +16,8 @@ import { useAuth } from "@/context/AuthContext";
 
 interface Seat {
   id: string;
-  row: string;
-  number: number;
-  type: 'standard' | 'vip' | 'premium';
+  seat_row: string;
+  seat_number: number;
   is_booked: boolean;
 }
 
@@ -39,17 +38,12 @@ interface ShowtimeDetails {
     name: string;
     cinema: {
       name: string;
-      location: string;
+      address: string;
+      city: string;
     };
   };
   seats: Seat[];
 }
-
-const SEAT_PRICES = {
-  standard: 0,
-  vip: 5,
-  premium: 3,
-};
 
 export default function BookingPage() {
   const params = useParams();
@@ -60,11 +54,11 @@ export default function BookingPage() {
   const [showtime, setShowtime] = useState<ShowtimeDetails | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(false);
 
   useEffect(() => {
     if (!user) {
-      router.push(`/customer/login?redirect=/booking/${showtimeId}`);
+      localStorage.setItem('redirectAfterLogin', window.location.pathname);
+      router.push(`/customer/login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
 
@@ -100,65 +94,62 @@ export default function BookingPage() {
 
   const calculateTotal = () => {
     if (!showtime) return 0;
-    const basePrice = showtime.price * selectedSeats.length;
-    const seatUpcharges = selectedSeats.reduce((sum, seat) => {
-      return sum + SEAT_PRICES[seat.type];
-    }, 0);
-    return basePrice + seatUpcharges;
+    return showtime.price * selectedSeats.length;
   };
 
-  const handleBooking = async () => {
+  const handleContinueToCheckout = () => {
     if (selectedSeats.length === 0) {
       alert('Please select at least one seat');
       return;
     }
 
-    setBooking(true);
-    try {
-      const response = await api.post('/api/bookings', {
-        showtime_id: showtimeId,
-        seat_ids: selectedSeats.map(s => s.id),
-        total_price: calculateTotal(),
-      });
+    // Store booking details in sessionStorage for checkout page
+    const bookingData = {
+      showtimeId: showtimeId,
+      seatIds: selectedSeats.map(s => s.id),
+      seats: selectedSeats.map(s => ({
+        id: s.id,
+        row: s.seat_row,
+        number: s.seat_number
+      })),
+      totalPrice: calculateTotal(),
+      showtime: {
+        movieTitle: showtime?.movie.title,
+        moviePoster: showtime?.movie.poster,
+        cinemaName: showtime?.auditorium.cinema.name,
+        auditoriumName: showtime?.auditorium.name,
+        startTime: showtime?.start_time,
+        format: showtime?.movie.format,
+        duration: showtime?.movie.duration,
+        genre: showtime?.movie.genre,
+        rating: showtime?.movie.rating,
+      }
+    };
 
-      // Redirect to payment or confirmation page
-      router.push(`/booking/confirmation/${response.data.data.id}`);
-    } catch (error: any) {
-      console.error('Booking failed:', error);
-      alert(error.response?.data?.message || 'Booking failed. Please try again.');
-    } finally {
-      setBooking(false);
-    }
+    sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+    router.push(`/checkout/${showtimeId}`);
   };
 
   const getSeatColor = (seat: Seat, isSelected: boolean) => {
     if (seat.is_booked) return 'bg-gray-700 cursor-not-allowed';
     if (isSelected) return 'bg-red-600 hover:bg-red-700';
-    
-    switch (seat.type) {
-      case 'vip':
-        return 'bg-yellow-600/20 hover:bg-yellow-600 border-yellow-600';
-      case 'premium':
-        return 'bg-blue-600/20 hover:bg-blue-600 border-blue-600';
-      default:
-        return 'bg-gray-600/20 hover:bg-gray-600 border-gray-600';
-    }
+    return 'bg-gray-600/20 hover:bg-gray-600 border-gray-600';
   };
 
   const groupSeatsByRow = (seats: Seat[]) => {
     const grouped = new Map<string, Seat[]>();
     seats.forEach(seat => {
-      if (!grouped.has(seat.row)) {
-        grouped.set(seat.row, []);
+      if (!grouped.has(seat.seat_row)) {
+        grouped.set(seat.seat_row, []);
       }
-      grouped.get(seat.row)?.push(seat);
+      grouped.get(seat.seat_row)?.push(seat);
     });
     
     return Array.from(grouped.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([row, seats]) => ({
         row,
-        seats: seats.sort((a, b) => a.number - b.number)
+        seats: seats.sort((a, b) => a.seat_number - b.seat_number)
       }));
   };
 
@@ -237,7 +228,12 @@ export default function BookingPage() {
               <div className="space-y-2 text-gray-400">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-red-600" />
-                  <span>{showtime.auditorium.cinema.name} - {showtime.auditorium.name}</span>
+                  <span>
+                    {showtime.auditorium.cinema.name} - {showtime.auditorium.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 ml-6 text-sm">
+                  <span>{showtime.auditorium.cinema.address}, {showtime.auditorium.cinema.city}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-red-600" />
@@ -272,19 +268,11 @@ export default function BookingPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Legend */}
             <Card className="bg-gray-900/50 border-gray-800 p-4">
-              <h3 className="text-white font-semibold mb-3">Seat Types</h3>
+              <h3 className="text-white font-semibold mb-3">Seat Legend</h3>
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-gray-600/20 border border-gray-600 rounded" />
-                  <span className="text-gray-400">Standard (${showtime.price})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-blue-600/20 border border-blue-600 rounded" />
-                  <span className="text-gray-400">Premium (+$3)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-yellow-600/20 border border-yellow-600 rounded" />
-                  <span className="text-gray-400">VIP (+$5)</span>
+                  <span className="text-gray-400">Available (${showtime.price})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-red-600 rounded" />
@@ -332,7 +320,7 @@ export default function BookingPage() {
                                   ? '' 
                                   : 'hover:scale-110 active:scale-95'
                               }`}
-                              title={`${row}${seat.number} - ${seat.type}`}
+                              title={`${row}${seat.seat_number}`}
                             >
                               <span className="text-xs font-bold text-white">
                                 {seat.is_booked ? (
@@ -340,7 +328,7 @@ export default function BookingPage() {
                                 ) : isSelected ? (
                                   <Check className="w-4 h-4 mx-auto" />
                                 ) : (
-                                  seat.number
+                                  seat.seat_number
                                 )}
                               </span>
                             </button>
@@ -366,7 +354,7 @@ export default function BookingPage() {
                     <span className="text-gray-400">Selected Seats</span>
                     <span className="text-white font-semibold">
                       {selectedSeats.length > 0 ? (
-                        selectedSeats.map(s => `${s.row}${s.number}`).join(', ')
+                        selectedSeats.map(s => `${s.seat_row}${s.seat_number}`).join(', ')
                       ) : (
                         'None'
                       )}
@@ -376,16 +364,14 @@ export default function BookingPage() {
                   {selectedSeats.length > 0 && (
                     <>
                       <div className="border-t border-gray-800 pt-3 space-y-2">
-                        {selectedSeats.map((seat) => (
-                          <div key={seat.id} className="flex justify-between text-sm">
-                            <span className="text-gray-400">
-                              {seat.row}{seat.number} ({seat.type})
-                            </span>
-                            <span className="text-white">
-                              ${showtime.price + SEAT_PRICES[seat.type]}
-                            </span>
-                          </div>
-                        ))}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">
+                            {selectedSeats.length} × ${showtime.price}
+                          </span>
+                          <span className="text-white">
+                            ${calculateTotal().toFixed(2)}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="border-t border-gray-800 pt-3">
@@ -412,20 +398,14 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                {/* Book Button */}
+                {/* Continue to Checkout Button */}
                 <Button
-                  onClick={handleBooking}
-                  disabled={selectedSeats.length === 0 || booking}
+                  onClick={handleContinueToCheckout}
+                  disabled={selectedSeats.length === 0}
                   className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 disabled:bg-gray-700 disabled:cursor-not-allowed"
                 >
-                  {booking ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    `Proceed to Payment (${selectedSeats.length} seat${selectedSeats.length !== 1 ? 's' : ''})`
-                  )}
+                  Continue to Checkout
+                  <ChevronRight className="w-4 h-4 ml-2" />
                 </Button>
 
                 <p className="text-xs text-gray-500 text-center">

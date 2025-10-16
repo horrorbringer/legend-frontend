@@ -38,8 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string, role: Role) => {
-    const endpoint = role === "admin" ? "/api/admin/login" : "/api/customer/login";
     
+    const endpoint = role === "admin" ? "/api/admin/login" : "/api/customer/login";
+  
     const res = await api.post(endpoint, { email, password });
     
     const { user, token } = res.data;
@@ -50,7 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     setUser(user);
     
-    router.push(role === "admin" ? "/admin/dashboard" : "/customer/dashboard");
+    // Check if there's a redirect URL in the query params or localStorage
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirectUrl = searchParams.get('redirect') || localStorage.getItem('redirectAfterLogin');
+    
+    // Clear the stored redirect
+    localStorage.removeItem('redirectAfterLogin');
+    
+    // Redirect to the intended page or default dashboard
+    if (redirectUrl && redirectUrl.startsWith('/')) {
+      router.push(redirectUrl);
+    } else {
+      router.push(role === "admin" ? "/admin/dashboard" : "/customer/dashboard");
+    }
   };
 
   const logout = async () => {
