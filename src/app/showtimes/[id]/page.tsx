@@ -14,7 +14,7 @@ export default function ShowtimeDetailPage() {
   }, [id]);
 
   const fetchShowtime = async () => {
-    const res = await api.get(`/api/customer/showtimes/${id}`);
+    const res = await api.get(`/api/showtimes/${id}`);
     setShowtime(res.data);
   };
 

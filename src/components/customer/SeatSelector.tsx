@@ -28,7 +28,7 @@ export default function SeatSelector({ showtimeId, onBooked }: Props) {
   }, [showtimeId]);
 
   const loadSeats = async () => {
-    const res = await api.get(`/api/customer/showtimes/${showtimeId}`);
+    const res = await api.get(`/api/showtimes/${showtimeId}`);
     setShowtime(res.data);
     setSeats(res.data.auditorium?.seats || []);
   };

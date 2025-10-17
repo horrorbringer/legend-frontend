@@ -27,14 +27,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for existing token on mount
-    const token = localStorage.getItem("token");
-    const savedUser = localStorage.getItem("user");
+    const verifyAuth = async () => {
+      const token = localStorage.getItem("token");
+      const savedUser = localStorage.getItem("user");
 
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+      if (token && savedUser) {
+        try {
+          // Verify token with backend
+          const response = await api.get("/api/verify-token");
+          // If verification successful, keep the saved user
+          if (response.data.success) {
+            setUser(JSON.parse(savedUser));
+          } else {
+            throw new Error('Token invalid');
+          }
+        } catch (error) {
+          // If verification fails, clear invalid data
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+
+    verifyAuth();
   }, []);
 
   const login = async (email: string, password: string, role: Role) => {

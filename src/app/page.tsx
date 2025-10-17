@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Clock, Star, Calendar, Film, Sparkles, TrendingUp, Award, Users } from "lucide-react";
-import ClientFooter from "@/components/ClientFooter";
 import ClientLayout from "@/components/ClientLayout";
 
 interface Movie {
@@ -206,7 +205,7 @@ export default async function HomePage() {
                           {movie.status.toUpperCase()}
                         </span>
                       </div>
-                      <Link href={`/movies/${movie.id}`} className="block">
+                      <Link href={`/showtimes/${movie.id}`} className="block">
                         <Button className="w-full bg-red-600 hover:bg-red-700 text-white font-bold">
                           <Film className="w-4 h-4 mr-2" />
                           View Showtimes

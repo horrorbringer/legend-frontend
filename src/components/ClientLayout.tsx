@@ -96,11 +96,11 @@ function Navbar() {
             </Link>
 
             {user?.role === "customer" && (
-              <Link href="/customer/bookings">
+              <Link href="/customer/dashboard">
                 <Button
                   variant="ghost"
                   className={`text-white hover:text-red-600 hover:bg-red-600/10 transition-colors ${
-                    isActive("/customer/bookings") ? "text-red-600 bg-red-600/10" : ""
+                    isActive("/customer/dashboard") ? "text-red-600 bg-red-600/10" : ""
                   }`}
                 >
                   <Ticket className="w-4 h-4 mr-2" />
