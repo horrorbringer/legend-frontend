@@ -43,7 +43,7 @@ const links = [
   },
   {
     name: "Bookings",
-    href: "/admin/bookings",
+    href: "/admin/dashboard/bookings",
     icon: CalendarDays
   },
   {

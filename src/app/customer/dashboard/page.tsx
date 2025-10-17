@@ -121,7 +121,7 @@ export default function CustomerBookingsPage() {
   const handleCancel = async (id: number) => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
     try {
-      await api.patch(`/api/bookings/${id}/cancel`);
+      await api.post(`/api/bookings/${id}/cancel`);
       alert("Booking canceled.");
       loadBookings();
     } catch (err) {

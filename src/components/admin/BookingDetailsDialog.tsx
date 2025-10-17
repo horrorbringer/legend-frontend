@@ -6,26 +6,39 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { api } from "@/lib/api";
 
-export function BookingDetailsDialog({ booking }: { booking: any }) {
+export function BookingDetailsDialog({ 
+  bookingId,
+  onClose,
+  onStatusUpdate 
+}: { 
+  bookingId: number;
+  onClose: () => void;
+  onStatusUpdate: () => void;
+}) {
   const [details, setDetails] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const loadDetails = async () => {
-    const res = await api.get(`/api/admin/bookings/${booking.id}`);
-    setDetails(res.data);
+    try {
+      const res = await api.get(`/api/admin/bookings/${bookingId}`);
+      setDetails(res.data);
+    } catch (error) {
+      console.error("Failed to load booking details:", error);
+    }
   };
 
   return (
-    <Dialog onOpenChange={(open) => open && loadDetails()}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">View</Button>
-      </DialogTrigger>
-
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Booking #{booking.id}</DialogTitle>
+          <DialogTitle>Booking #{bookingId}</DialogTitle>
         </DialogHeader>
 
-        {details ? (
+        {loading ? (
+          <div className="flex items-center justify-center p-8">
+            <div className="w-8 h-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        ) : details ? (
           <div className="space-y-4">
             {/* Movie & Showtime Info */}
             <div>
@@ -62,7 +75,59 @@ export function BookingDetailsDialog({ booking }: { booking: any }) {
             </div>
           </div>
         ) : (
-          <p>Loading booking details...</p>
+          <p>Could not load booking details</p>
+        )}
+
+        {details && (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+            {details.status === 'pending' && (
+              <>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    try {
+                      setLoading(true);
+                      await api.patch(`/api/admin/bookings/${bookingId}/status`, {
+                        status: 'cancelled'
+                      });
+                      onStatusUpdate();
+                      onClose();
+                    } catch (error) {
+                      console.error("Failed to update booking status:", error);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  Cancel Booking
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
+                      setLoading(true);
+                      await api.patch(`/api/admin/bookings/${bookingId}/status`, {
+                        status: 'confirmed'
+                      });
+                      onStatusUpdate();
+                      onClose();
+                    } catch (error) {
+                      console.error("Failed to update booking status:", error);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  Confirm Booking
+                </Button>
+              </>
+            )}
+          </div>
         )}
       </DialogContent>
     </Dialog>
